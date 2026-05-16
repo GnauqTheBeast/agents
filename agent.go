@@ -40,7 +40,53 @@ type Agent struct {
 // Run executes the agent loop until the model replies with plain text (no
 // tool calls) or MaxIterations is exceeded. Returns the model's final text.
 func (a *Agent) Run(ctx context.Context, userInput string) (string, error) {
-	return "", fmt.Errorf("not implemented")
+	history := []*genai.Content{
+		{Role: "user", Parts: []*genai.Part{{Text: userInput}}},
+	}
+
+	cfg := &genai.GenerateContentConfig{Tools: a.Tools}
+	if a.SystemPrompt != "" {
+		cfg.SystemInstruction = &genai.Content{
+			Parts: []*genai.Part{{Text: a.SystemPrompt}},
+		}
+	}
+
+	for i := 0; i < a.MaxIterations; i++ {
+		a.logf("turn %d: calling Gemini", i+1)
+
+		resp, err := a.Generate(ctx, a.Model, history, cfg)
+		if err != nil {
+			return "", fmt.Errorf("generate: %w", err)
+		}
+		if len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
+			return "", fmt.Errorf("no candidate in response")
+		}
+		msg := resp.Candidates[0].Content
+		history = append(history, msg)
+
+		var finalText strings.Builder
+		sawText := false
+		sawCall := false
+
+		for _, part := range msg.Parts {
+			if part.Text != "" {
+				sawText = true
+				finalText.WriteString(part.Text)
+			}
+			if part.FunctionCall != nil {
+				sawCall = true
+			}
+		}
+
+		if sawText && !sawCall {
+			a.logf("final: %s", finalText.String())
+			return finalText.String(), nil
+		}
+
+		// Function calls — not yet handled. Will add in Task 3.
+		return "", fmt.Errorf("function calls not yet supported")
+	}
+	return "", fmt.Errorf("agent %q exceeded %d iterations", a.Name, a.MaxIterations)
 }
 
 // geminiGenerate adapts a *genai.Client into a generateFunc.
