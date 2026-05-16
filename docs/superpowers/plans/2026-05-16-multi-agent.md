@@ -29,25 +29,13 @@
 
 ---
 
-## Task 0: Baseline commit + scaffold layout
+## Task 0: Baseline commit ✅ already done
 
-**Files:**
-- Snapshot existing state before rewriting.
+The repo already has two commits:
+- `3f0c849 first commit` — original single-file `main.go`, `go.mod`, `go.sum`, `.gitignore`
+- `06a6d0a docs: add multi-agent upgrade spec and implementation plan` — this design spec + plan
 
-- [ ] **Step 1: Check repo state**
-
-Run: `cd minimal-agent-go && git status && git log --oneline`
-Expected: working tree shows `main.go`, `go.mod`, `go.sum`, `.gitignore`, `.env`; `git log` errors with "does not have any commits yet".
-
-- [ ] **Step 2: Stage and commit the existing single-file agent as the baseline**
-
-```bash
-cd minimal-agent-go
-git add main.go go.mod go.sum .gitignore docs/
-git commit -m "chore: baseline single-file agent + design spec + plan"
-```
-
-Expected: commit created. Verify with `git log --oneline` (should show one commit).
+Skip this task and start at Task 1.
 
 ---
 
