@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"google.golang.org/genai"
@@ -48,7 +47,7 @@ func TestRunTerminatesOnText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(got, "hello world") {
-		t.Fatalf("expected final text to contain %q, got %q", "hello world", got)
+	if got != "hello world" {
+		t.Fatalf("expected final text %q, got %q", "hello world", got)
 	}
 }
