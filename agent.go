@@ -65,26 +65,34 @@ func (a *Agent) Run(ctx context.Context, userInput string) (string, error) {
 		history = append(history, msg)
 
 		var finalText strings.Builder
+		var toolResults []*genai.Part
 		sawText := false
-		sawCall := false
 
 		for _, part := range msg.Parts {
-			if part.Text != "" {
+			switch {
+			case part.FunctionCall != nil:
+				fc := part.FunctionCall
+				a.logf("  wants to call: %s(%v)", fc.Name, fc.Args)
+				result := a.Dispatch(ctx, fc.Name, fc.Args)
+				a.logf("  result: %s", result)
+				toolResults = append(toolResults, &genai.Part{
+					FunctionResponse: &genai.FunctionResponse{
+						Name:     fc.Name,
+						Response: map[string]any{"result": result},
+					},
+				})
+			case part.Text != "":
 				sawText = true
 				finalText.WriteString(part.Text)
 			}
-			if part.FunctionCall != nil {
-				sawCall = true
-			}
 		}
 
-		if sawText && !sawCall {
+		if len(toolResults) == 0 && sawText {
 			a.logf("final: %s", finalText.String())
 			return finalText.String(), nil
 		}
 
-		// Function calls — not yet handled. Will add in Task 3.
-		return "", fmt.Errorf("function calls not yet supported")
+		history = append(history, &genai.Content{Role: "user", Parts: toolResults})
 	}
 	return "", fmt.Errorf("agent %q exceeded %d iterations", a.Name, a.MaxIterations)
 }

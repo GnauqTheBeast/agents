@@ -51,3 +51,49 @@ func TestRunTerminatesOnText(t *testing.T) {
 		t.Fatalf("expected final text %q, got %q", "hello world", got)
 	}
 }
+
+func funcCallResp(name string, args map[string]any) *genai.GenerateContentResponse {
+	return &genai.GenerateContentResponse{
+		Candidates: []*genai.Candidate{{
+			Content: &genai.Content{
+				Role: "model",
+				Parts: []*genai.Part{{
+					FunctionCall: &genai.FunctionCall{Name: name, Args: args},
+				}},
+			},
+		}},
+	}
+}
+
+func TestRunLoopsOnFunctionCall(t *testing.T) {
+	var captured map[string]any
+	dispatch := func(_ context.Context, name string, args map[string]any) string {
+		if name != "echo" {
+			t.Fatalf("unexpected tool %q", name)
+		}
+		captured = args
+		return "echoed:" + args["msg"].(string)
+	}
+
+	agent := &Agent{
+		Name:          "test",
+		Model:         "fake",
+		MaxIterations: 5,
+		Dispatch:      dispatch,
+		Generate: scriptedGenerate([]*genai.GenerateContentResponse{
+			funcCallResp("echo", map[string]any{"msg": "hi"}),
+			textResp("done"),
+		}),
+	}
+
+	got, err := agent.Run(context.Background(), "use echo")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "done" {
+		t.Fatalf("expected final text %q, got %q", "done", got)
+	}
+	if captured["msg"] != "hi" {
+		t.Fatalf("expected dispatch to receive msg=hi, got %v", captured)
+	}
+}
