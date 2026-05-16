@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"google.golang.org/genai"
@@ -95,5 +96,32 @@ func TestRunLoopsOnFunctionCall(t *testing.T) {
 	}
 	if captured["msg"] != "hi" {
 		t.Fatalf("expected dispatch to receive msg=hi, got %v", captured)
+	}
+}
+
+func TestRunErrorsAtIterationCap(t *testing.T) {
+	// Every response calls a tool — the loop never sees a text-only reply.
+	dispatch := func(_ context.Context, _ string, _ map[string]any) string {
+		return "noop"
+	}
+	resps := make([]*genai.GenerateContentResponse, 5)
+	for i := range resps {
+		resps[i] = funcCallResp("echo", map[string]any{"msg": "x"})
+	}
+
+	agent := &Agent{
+		Name:          "test",
+		Model:         "fake",
+		MaxIterations: 3,
+		Dispatch:      dispatch,
+		Generate:      scriptedGenerate(resps),
+	}
+
+	_, err := agent.Run(context.Background(), "loop forever")
+	if err == nil {
+		t.Fatalf("expected iteration-cap error, got nil")
+	}
+	if !strings.Contains(err.Error(), "exceeded") {
+		t.Fatalf("expected error to mention 'exceeded', got %q", err.Error())
 	}
 }
