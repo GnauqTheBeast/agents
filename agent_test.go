@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -123,5 +124,36 @@ func TestRunErrorsAtIterationCap(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "exceeded") {
 		t.Fatalf("expected error to mention 'exceeded', got %q", err.Error())
+	}
+}
+
+func TestUnknownToolReturnsErrorString(t *testing.T) {
+	// Dispatch only knows "echo". Model calls "ghost" — dispatch returns an
+	// error string, the loop must continue rather than crash, and the next
+	// model response (plain text) should terminate normally.
+	dispatch := func(_ context.Context, name string, _ map[string]any) string {
+		if name == "echo" {
+			return "ok"
+		}
+		return fmt.Sprintf("error: unknown tool %q", name)
+	}
+
+	agent := &Agent{
+		Name:          "test",
+		Model:         "fake",
+		MaxIterations: 5,
+		Dispatch:      dispatch,
+		Generate: scriptedGenerate([]*genai.GenerateContentResponse{
+			funcCallResp("ghost", map[string]any{}),
+			textResp("recovered"),
+		}),
+	}
+
+	got, err := agent.Run(context.Background(), "trigger unknown")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "recovered" {
+		t.Fatalf("expected final text %q, got %q", "recovered", got)
 	}
 }
