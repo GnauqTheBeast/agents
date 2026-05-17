@@ -11,7 +11,7 @@ import (
 // prompt, tool set, and dispatch map. This is where you'd add new roles.
 // -----------------------------------------------------------------------------
 
-// NewResearcher: gathers facts via the `search` tool, returns a bullet list.
+// NewResearcher gathers facts via the `search` tool, returns a bullet list.
 // No sub-agents.
 //
 // Why this prompt: we forbid prose so the writer gets clean notes. We tell
@@ -40,7 +40,7 @@ func NewResearcher(gen generateFunc, depth int) *Agent {
 	}
 }
 
-// NewWriter: no tools. Turns research notes into a 2-3 paragraph answer.
+// NewWriter no tools. Turns research notes into a 2-3 paragraph answer.
 //
 // Why no tools: the writer should not be tempted to second-guess research.
 // Giving it zero tools forces it to work from its input.
@@ -60,7 +60,7 @@ func NewWriter(gen generateFunc, depth int) *Agent {
 	}
 }
 
-// NewOrchestrator: coordinates researcher + writer. Each sub-agent is exposed
+// NewOrchestrator coordinates researcher + writer. Each sub-agent is exposed
 // as a tool. The dispatch map is the heart of the demo: notice that calling
 // `research` (which runs a whole nested agent loop) looks identical to
 // calling any plain Go function.
